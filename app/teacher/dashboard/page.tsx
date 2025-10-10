@@ -1,4 +1,5 @@
 // app/teacher/dashboard/page.tsx
+import React from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { PrismaClient } from "@prisma/client";
@@ -8,28 +9,37 @@ import { deleteQuiz, duplicateQuiz } from "@/app/teacher/quizzes/actions";
 import DeleteButton from "@/components/DeleteButton";
 import Filters from "./Filters"; // client filter component
 
-const prisma = new PrismaClient();
-const PAGE_SIZE = 6; // quizzes per page
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ["error"],
+  });
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-export default async function TeacherDashboardPage({
-  searchParams,
-}: {
-  searchParams: { page?: string; yearGroup?: string; className?: string };
-}) {
+const PAGE_size = 6; // quizzes per page
+const PAGE_SIZE = PAGE_size; // keep readable constant
+
+export default async function TeacherDashboardPage(props: any): Promise<React.ReactElement> {
+  // normalize searchParams (accepts either a plain object or a Promise)
+  const rawSearch = await Promise.resolve(props?.searchParams);
+  const searchParams = (rawSearch ?? {}) as {
+    page?: string;
+    yearGroup?: string;
+    className?: string;
+  };
+
   const session = await auth();
   if (session?.user?.role !== "TEACHER" && session?.user?.role !== "ADMIN") {
     redirect("/unauthorized");
   }
 
-    // await the proxied searchParams before using
-  const params = await searchParams;
-
   // parse page safely with radix and fallback
-  const page = parseInt(params.page ?? "1", 10);
+  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1);
 
   // use nullish coalescing to keep undefined when not present
-  const yearGroupFilter = params.yearGroup ?? undefined;
-  const classNameFilter = params.className ?? undefined;
+  const yearGroupFilter = searchParams.yearGroup ?? undefined;
+  const classNameFilter = searchParams.className ?? undefined;
 
   // Build Prisma where clause
   const where: any = { teacherId: session?.user?.id };
@@ -44,7 +54,7 @@ export default async function TeacherDashboardPage({
     skip: (page - 1) * PAGE_SIZE,
   });
 
-  const totalPages = Math.ceil(totalQuizzes / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(totalQuizzes / PAGE_SIZE));
 
   // Distinct yearGroups for filters
   const allQuizzes = await prisma.quiz.findMany({
@@ -92,9 +102,7 @@ export default async function TeacherDashboardPage({
               className="bg-white p-6 rounded-lg shadow-md flex flex-col justify-between"
             >
               <div>
-                <h3 className="text-xl font-bold text-gray-800">
-                  {quiz.title}
-                </h3>
+                <h3 className="text-xl font-bold text-gray-800">{quiz.title}</h3>
                 <p className="mt-2 text-gray-600">{quiz.description}</p>
                 {quiz.startDate && (
                   <p className="mt-2 text-sm text-gray-500">
@@ -103,16 +111,14 @@ export default async function TeacherDashboardPage({
                 )}
                 {quiz.startTime && (
                   <p className="mt-2 text-sm text-gray-500">
-                    <strong>Start Time:</strong>{" "}
-                    {format(quiz.startTime, "hh:mm a")}
+                    <strong>Start Time:</strong> {format(quiz.startTime, "hh:mm a")}
                   </p>
                 )}
                 <p className="mt-2 text-sm text-gray-500">
                   <strong>Duration:</strong> {quiz.duration} minutes
                 </p>
                 <p className="mt-2 text-sm text-gray-500">
-                  <strong>Year/Class:</strong> {quiz.yearGroup} /{" "}
-                  {quiz.className}
+                  <strong>Year/Class:</strong> {quiz.yearGroup} / {quiz.className}
                 </p>
               </div>
 
@@ -158,12 +164,8 @@ export default async function TeacherDashboardPage({
         {Array.from({ length: totalPages }).map((_, i) => (
           <Link
             key={i}
-            href={`?page=${i + 1}&yearGroup=${
-              yearGroupFilter || ""
-            }&className=${classNameFilter || ""}`}
-            className={`px-3 py-1 border rounded-md ${
-              page === i + 1 ? "bg-gray-800 text-white" : "bg-white"
-            }`}
+            href={`?page=${i + 1}&yearGroup=${yearGroupFilter || ""}&className=${classNameFilter || ""}`}
+            className={`px-3 py-1 border rounded-md ${page === i + 1 ? "bg-gray-800 text-white" : "bg-white"}`}
           >
             {i + 1}
           </Link>

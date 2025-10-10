@@ -1,125 +1,5 @@
-// // app/student/dashboard/page.tsx
-// import { auth } from "@/auth";
-// import { redirect } from "next/navigation";
-// import { PrismaClient } from "@prisma/client";
-// import Link from "next/link";
-// import CountdownBadge from "./CountdownTimer";
-// import StartButton from "./StartButton";
-
-// const prisma = new PrismaClient();
-// const PAGE_SIZE = 6;
-
-// export default async function StudentDashboardPage({
-//   searchParams,
-// }: {
-//   searchParams: { page?: string };
-// }) {
-//   const session = await auth();
-//   if (!session?.user) redirect("/auth/login");
-
-//   const page = parseInt(searchParams.page || "1");
-
-//   // Only published quizzes for student's year/class
-//   const where = {
-//     isPublished: true,
-//     yearGroup: session.user.yearGroup,
-//     className: session.user.className,
-//   };
-
-//   const totalQuizzes = await prisma.quiz.count({ where });
-//   const quizzes = await prisma.quiz.findMany({
-//     where,
-//     orderBy: { startDate: "asc" },
-//     take: PAGE_SIZE,
-//     skip: (page - 1) * PAGE_SIZE,
-//   });
-
-//   const totalPages = Math.ceil(totalQuizzes / PAGE_SIZE);
-
-//   return (
-//     <div className="container mx-auto p-6">
-//       <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">
-//         My Exams
-//       </h1>
-
-//       {quizzes.length === 0 ? (
-//         <p className="text-gray-600 text-center text-lg">No available exams.</p>
-//       ) : (
-//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-//           {quizzes.map((quiz) => {
-//             const startTime = quiz.startTime ? new Date(quiz.startTime) : null;
-//             const endTime =
-//               startTime && quiz.duration
-//                 ? new Date(startTime.getTime() + quiz.duration * 60000)
-//                 : null;
-//             const now = new Date();
-//             const hasStarted = startTime ? now >= startTime : false;
-//             const hasEnded = endTime ? now >= endTime : false;
-
-//             return (
-//               <div
-//                 key={quiz.id}
-//                 className={`relative p-6 rounded-xl shadow-xl flex flex-col justify-between transition-transform transform hover:-translate-y-1 hover:shadow-2xl ${
-//                   !hasStarted || hasEnded
-//                     ? "opacity-60 bg-gray-50"
-//                     : "bg-gradient-to-br from-indigo-400 to-purple-500 text-white"
-//                 }`}
-//               >
-//                 {/* Countdown / Status Badge */}
-//                 {startTime && quiz.duration && <CountdownBadge quiz={quiz} />}
-
-//                 <div>
-//                   <h2 className="text-2xl font-bold mb-2">{quiz.title}</h2>
-//                   {quiz.description && (
-//                     <p className="mb-2 text-sm md:text-base">
-//                       {quiz.description}
-//                     </p>
-//                   )}
-//                   <p className="text-sm font-medium">
-//                     <strong>Start Date:</strong>{" "}
-//                     {startTime?.toDateString() || "TBD"}
-//                   </p>
-//                   <p className="text-sm font-medium">
-//                     <strong>Duration:</strong> {quiz.duration} minutes
-//                   </p>
-//                   <p className="text-sm font-medium">
-//                     <strong>Year/Class:</strong> {quiz.yearGroup} /{" "}
-//                     {quiz.className}
-//                   </p>
-//                 </div>
-
-//                 {/* Start Button */}
-//                 {hasStarted && !hasEnded && <StartButton quiz={quiz} />}
-//               </div>
-//             );
-//           })}
-//         </div>
-//       )}
-
-//       {/* Pagination */}
-//       {totalPages > 1 && (
-//         <div className="flex justify-center mt-10 gap-3">
-//           {Array.from({ length: totalPages }).map((_, i) => (
-//             <Link
-//               key={i}
-//               href={`?page=${i + 1}`}
-//               className={`px-4 py-2 rounded-md border font-semibold ${
-//                 page === i + 1
-//                   ? "bg-indigo-500 text-white"
-//                   : "bg-white text-gray-700 hover:bg-indigo-100"
-//               }`}
-//             >
-//               {i + 1}
-//             </Link>
-//           ))}
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
-
 // app/student/dashboard/page.tsx
+import React from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { PrismaClient } from "@prisma/client";
@@ -128,18 +8,17 @@ import CountdownBadge from "./CountdownTimer";
 import StartButton from "./StartButton";
 
 const prisma = new PrismaClient();
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 3;
 
-export default async function StudentDashboardPage({
-  searchParams,
-}: {
-  searchParams: { page?: string };
-}) {
+export default async function StudentDashboardPage(props: any): Promise<React.ReactElement> {
+  // normalize searchParams (accepts plain object or Promise)
+  const rawSearch = await Promise.resolve(props?.searchParams);
+  const searchParams = (rawSearch ?? {}) as { page?: string };
+
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
 
   // --- Fetch the canonical user record from the DB ---
-  // Prefer using session.user.id if available; otherwise fall back to email.
   const userIdentifier = (session.user as any).id ?? session.user.email;
   const dbUser =
     userIdentifier && (session.user as any).id
@@ -148,15 +27,10 @@ export default async function StudentDashboardPage({
       ? await prisma.user.findUnique({ where: { email: session.user.email } })
       : null;
 
-  // Debug logging so you can inspect what came from auth() vs DB
-  console.log("auth() session.user:", session.user);
-  console.log("DB user row:", dbUser);
-
-  // Use the DB values if present; fall back to session user if necessary
+  // Use DB values if present; fall back to session user if necessary
   const studentYear = (dbUser?.yearGroup ?? (session.user as any).yearGroup)?.toString().trim();
   const studentClass = (dbUser?.className ?? (session.user as any).className)?.toString().trim();
 
-  // If still missing -> show error message
   if (!studentYear || !studentClass) {
     return (
       <div className="container mx-auto p-6">
@@ -186,8 +60,7 @@ dbUser: ${JSON.stringify(dbUser)}`}
     className: studentClass,
   };
 
-  const params = await searchParams;
-  const page = parseInt(params.page || "1", 10);
+  const page = Math.max(1, parseInt(searchParams.page || "1", 10) || 1);
   const totalQuizzes = await prisma.quiz.count({ where });
   const quizzes = await prisma.quiz.findMany({
     where,
@@ -196,24 +69,20 @@ dbUser: ${JSON.stringify(dbUser)}`}
     skip: (page - 1) * PAGE_SIZE,
   });
 
-  const totalPages = Math.ceil(totalQuizzes / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(totalQuizzes / PAGE_SIZE));
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">
-        My Exams
-      </h1>
+      <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">My Exams</h1>
 
       {quizzes.length === 0 ? (
         <p className="text-gray-600 text-center text-lg">No available exams.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {quizzes.map((quiz) => {
-            // Use the same source for start time everywhere (quiz.startDate)
             const startTimeISO = quiz.startDate?.toISOString() ?? null;
-            const duration = quiz.duration ?? 60; // minutes
+            const duration = quiz.duration ?? 60;
 
-            // Server snapshot of remaining seconds (used to avoid hydration mismatch)
             let serverRemainingSeconds: number | null = null;
             let serverStartLabel: string | null = null;
             let serverEndLabel: string | null = null;
@@ -224,8 +93,6 @@ dbUser: ${JSON.stringify(dbUser)}`}
               startTime = new Date(startTimeISO);
               endTime = new Date(startTime.getTime() + duration * 60000);
               serverRemainingSeconds = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
-
-              // Compute labels on the server and pass them verbatim to the client component
               serverStartLabel = startTime.toLocaleString();
               serverEndLabel = endTime.toLocaleString();
             }
@@ -238,9 +105,7 @@ dbUser: ${JSON.stringify(dbUser)}`}
               <div
                 key={quiz.id}
                 className={`relative p-6 rounded-xl shadow-xl flex flex-col justify-between transition-transform transform hover:-translate-y-1 hover:shadow-2xl ${
-                  !hasStarted || hasEnded
-                    ? "opacity-90 bg-white"
-                    : "bg-gradient-to-br from-indigo-400 to-purple-500 text-white"
+                  !hasStarted || hasEnded ? "opacity-90 bg-white" : "bg-gradient-to-br from-indigo-400 to-purple-500 text-white"
                 }`}
               >
                 <CountdownBadge
@@ -258,10 +123,7 @@ dbUser: ${JSON.stringify(dbUser)}`}
                     <strong>Start:</strong> {startTime ? serverStartLabel : "TBD"}
                   </p>
                   <p className="text-sm font-medium">
-                    <strong>End:</strong>{" "}
-                    {endTime
-                      ? serverEndLabel
-                      : "TBD"}
+                    <strong>End:</strong> {endTime ? serverEndLabel : "TBD"}
                   </p>
                   <p className="text-sm font-medium">
                     <strong>Duration:</strong> {quiz.duration} minutes
@@ -275,22 +137,16 @@ dbUser: ${JSON.stringify(dbUser)}`}
               </div>
             );
           })}
-
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center mt-10 gap-3">
           {Array.from({ length: totalPages }).map((_, i) => (
             <Link
               key={i}
               href={`?page=${i + 1}`}
-              className={`px-4 py-2 rounded-md border font-semibold ${
-                page === i + 1
-                  ? "bg-indigo-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-indigo-100"
-              }`}
+              className={`px-4 py-2 rounded-md border font-semibold ${page === i + 1 ? "bg-indigo-500 text-white" : "bg-white text-gray-700 hover:bg-indigo-100"}`}
             >
               {i + 1}
             </Link>

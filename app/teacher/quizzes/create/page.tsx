@@ -1,9 +1,10 @@
 // app/teacher/quizzes/create/page.tsx
+import React from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import QuizCreationWrapper from "./quiz-creation-wrapper";
 
-export default async function CreateQuizPage() {
+export default async function CreateQuizPage(_props: any): Promise<React.ReactElement> {
   const session = await auth();
   if (session?.user?.role !== "TEACHER") {
     redirect("/unauthorized");
