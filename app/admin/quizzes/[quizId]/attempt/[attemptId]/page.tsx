@@ -9,8 +9,17 @@ const prisma = new PrismaClient();
 export default async function ReviewAttemptPage({
   params,
 }: {
-  params: { quizId: string; attemptId: string };
+  // keep params typed as possibly undefined; we'll await it below as Next expects
+  params: { quizId?: string; attemptId?: string } | Promise<{ quizId?: string; attemptId?: string }>;
 }) {
+  // Await the params object to satisfy Next's "sync dynamic APIs" typing.
+  const p = await params;
+  const quizId = p?.quizId;
+  const attemptId = p?.attemptId;
+  if (!quizId || !attemptId) {
+    return <div className="text-center mt-8">Missing quiz or attempt id.</div>;
+  }
+
   const session = await auth();
   if (!session || !["ADMIN", "TEACHER"].includes(session.user.role)) {
     redirect("/unauthorized");
@@ -18,7 +27,7 @@ export default async function ReviewAttemptPage({
 
   // Fetch attempt with relations:
   const attempt = await prisma.quizAttempt.findUnique({
-    where: { id: params.attemptId },
+    where: { id: attemptId },
     include: {
       student: true,
       quiz: true,
@@ -53,7 +62,7 @@ export default async function ReviewAttemptPage({
     questionText: string;
     type: string;
     points: number;
-    isCorrect: boolean | null; // null for paragraph/manual
+    isCorrect: boolean | null;
     studentAnswer: string | string[] | null;
     correctAnswerDisplay: string;
   }> = [];
@@ -109,10 +118,9 @@ export default async function ReviewAttemptPage({
         isCorrect = false;
       }
     } else if (q.type === "PARAGRAPH") {
-      // paragraph questions require manual grading
       correctAnswerDisplay = q.correctAnswer ?? "Manual grading required";
       studentAnswer = ans?.textAnswer ?? null;
-      isCorrect = null; // unknown / manual
+      isCorrect = null;
     }
 
     perQuestionResults.push({
@@ -126,7 +134,6 @@ export default async function ReviewAttemptPage({
     });
   }
 
-  // Optionally: if DB already stores attempt.score, prefer that
   const displayedScore =
     typeof attempt.score === "number" ? attempt.score : computedScore;
 
@@ -167,7 +174,6 @@ export default async function ReviewAttemptPage({
                     <h3 className="text-lg font-medium">{r.questionText}</h3>
                     <span className="ml-2 text-sm text-gray-500">({r.type})</span>
                   </div>
-                  <p className="mt-2 text-sm text-gray-700">{/* optional additional text */}</p>
                   <p className="mt-2 text-sm">
                     <strong>Points:</strong> {r.points}
                   </p>
