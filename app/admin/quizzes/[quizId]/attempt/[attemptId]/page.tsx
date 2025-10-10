@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { PrismaClient } from "@prisma/client";
 
 declare global {
-  // keep a single PrismaClient in development to avoid too many connections
+  // Single PrismaClient instance in dev to avoid connection storm
   // eslint-disable-next-line no-var
   var __next_prisma__: PrismaClient | undefined;
 }
@@ -16,17 +16,19 @@ const prisma: PrismaClient =
 if (process.env.NODE_ENV !== "production") global.__next_prisma__ = prisma;
 
 type Params = { quizId: string; attemptId: string };
-type Props = {
-  params: {
-    quizId: string | Promise<string>;
-    attemptId: string | Promise<string>;
-  };
-};
 
-export default async function ReviewAttemptPage({ params }: Props): Promise<React.ReactElement> {
-  // normalize params (handles both plain object and Promise variants)
-  const p = (await Promise.resolve(params)) as Params;
-  const { quizId, attemptId } = p;
+export default async function ReviewAttemptPage(props: any): Promise<React.ReactElement> {
+  // Normalize params. This tolerates:
+  // - props.params being a plain object
+  // - props.params being a Promise that resolves to the object
+  const rawParams = await Promise.resolve(props?.params);
+  const params = (rawParams ?? {}) as Partial<Params>;
+  const { attemptId } = params;
+
+  if (!attemptId) {
+    // defensive: invalid route invocation
+    return <div className="text-center mt-8">Invalid attempt id.</div>;
+  }
 
   const session = await auth();
   if (!session || !["ADMIN", "TEACHER"].includes(session.user.role)) {
