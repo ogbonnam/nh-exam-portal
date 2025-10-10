@@ -1,11 +1,21 @@
 // app/admin/quizzes/[quizId]/page.tsx
+import React from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { PrismaClient, Quiz, QuizAttempt, Question, User } from "@prisma/client";
 import Link from "next/link";
 import QuizScoreChart from "./QuizScoreChart"; // client component
 
-const prisma = new PrismaClient();
+declare global {
+  // single PrismaClient in dev mode to avoid connection storms
+  // eslint-disable-next-line no-var
+  var __next_prisma__: PrismaClient | undefined;
+}
+
+const prisma: PrismaClient =
+  global.__next_prisma__ ?? new PrismaClient({ log: ["error"] });
+
+if (process.env.NODE_ENV !== "production") global.__next_prisma__ = prisma;
 
 type QuizWithRelations = Quiz & {
   teacher: User;
@@ -13,19 +23,21 @@ type QuizWithRelations = Quiz & {
   attempts: (QuizAttempt & { student: User })[];
 };
 
-export default async function QuizResultsPage({
-  params,
-}: {
-  params: { quizId?: string };
-}) {
-  const quizId = params?.quizId;
-  if (!quizId) return <div className="text-center mt-8">Missing quiz id.</div>;
+export default async function QuizResultsPage(props: any): Promise<React.ReactElement> {
+  // normalize params (handles both sync object and Promise)
+  const rawParams = await Promise.resolve(props?.params);
+  const params = (rawParams ?? {}) as { quizId?: string };
+
+  const quizId = params.quizId;
+  if (!quizId) {
+    return <div className="text-center mt-8">Missing quiz id.</div>;
+  }
 
   const session = await auth();
   const user = session?.user;
   if (!user) redirect("/auth/login");
 
-  // Fetch quiz + basic relations (no heavy nested include of answers here)
+  // Fetch quiz + relations
   const quiz: QuizWithRelations | null = await prisma.quiz.findUnique({
     where: { id: quizId },
     include: {
@@ -51,19 +63,14 @@ export default async function QuizResultsPage({
     );
   }
 
-  // For each submitted attempt, load its UserAnswer rows (with question & options) and compute score
+  // compute scores for attempts
   const attemptsWithScores = await Promise.all(
     quiz.attempts.map(async (attempt) => {
-      // load user answers for this attempt, include question & question.options
       const answers = await prisma.userAnswer.findMany({
         where: { attemptId: attempt.id },
         include: { question: { include: { options: true } } },
       });
 
-      // compute score: 1) OPTIONS -> check selected option id matches option.isCorrect
-      //                2) CHECKBOX -> compare sets of correct option ids to selected option ids
-      //                3) FILL_IN_THE_BLANK -> compare text (case-insensitive, trimmed)
-      //                4) PARAGRAPH -> left for manual grading (does not add to auto-score)
       let score = 0;
       for (const ans of answers) {
         const q = ans.question;
@@ -87,17 +94,13 @@ export default async function QuizResultsPage({
             score += q.points ?? 1;
           }
         }
-        // PARAGRAPH: no automatic points
+        // PARAGRAPH: manual grading
       }
 
-      return {
-        attempt,
-        score,
-      };
+      return { attempt, score };
     })
   );
 
-  // build studentScores array for chart { name, score }
   const studentScores = attemptsWithScores.map(({ attempt, score }) => ({
     name: attempt.student?.name ?? attempt.student?.email ?? "Unknown",
     score,
@@ -146,9 +149,11 @@ export default async function QuizResultsPage({
 
           <h2 className="text-xl font-semibold mb-4">Scores Chart</h2>
 
-          {/* QuizScoreChart is a client component that expects data: { name, score }[] */}
           <div className="bg-white p-4 rounded-lg shadow-md">
-            <QuizScoreChart data={studentScores} maxScore={quiz.questions.reduce((acc, q) => acc + (q.points ?? 1), 0)} />
+            <QuizScoreChart
+              data={studentScores}
+              maxScore={quiz.questions.reduce((acc, q) => acc + (q.points ?? 1), 0)}
+            />
           </div>
         </>
       )}
