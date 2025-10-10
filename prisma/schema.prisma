@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// prisma/schema.prisma
+
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id    String @id @default(cuid())
+  name  String @unique
+  users User[]
+}
+
+model User {
+  id        String        @id @default(cuid())
+  email     String        @unique
+  name      String?
+  password  String
+  roleId    String
+  role      Role          @relation(fields: [roleId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  quizzes   Quiz[]
+  answers   UserAnswer[]
+  attempts  QuizAttempt[]
+
+  // Student-specific fields
+  yearGroup String?
+  className String?
+}
+
+model Quiz {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  duration    Int           @default(60)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  teacherId   String
+  teacher     User          @relation(fields: [teacherId], references: [id])
+  questions   Question[]
+  attempts    QuizAttempt[]
+  isPublished  Boolean    @default(false)
+  startDate    DateTime? // New field for exam start date
+  startTime    DateTime? // New field for exam start time
+  canTeacherEdit  Boolean   @default(true) // New field for conditional editing
+
+  // 🔥 New fields
+  yearGroup   String   @default("Unknown")
+  className   String   @default("Unknown")
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  text          String
+  imageUrl      String? // Added for question images
+  type          QuestionType
+  points        Int          @default(1)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  quizId        String
+  quiz          Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options       Option[]
+  correctAnswer String? // For fill-in-the-blank
+
+  // Add this line to define the inverse relation
+  userAnswers UserAnswer[]
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  text       String
+  imageUrl   String? // Added for option images
+  isCorrect  Boolean
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+enum QuestionType {
+  OPTIONS // Multiple choice (radio buttons)
+  CHECKBOX // Checkbox (multiple correct answers)
+  PARAGRAPH // Free text
+  FILL_IN_THE_BLANK
+}
+
+model QuizAttempt {
+  id          String       @id @default(cuid())
+  studentId   String
+  student     User         @relation(fields: [studentId], references: [id])
+  quizId      String
+  quiz        Quiz         @relation(fields: [quizId], references: [id])
+  isSubmitted Boolean      @default(false)
+  score       Int?
+  startedAt   DateTime     @default(now())
+  submittedAt DateTime?
+  focusLossCount  Int      @default(0)
+  questionOrder   String[]
+  UserAnswer  UserAnswer[]
+}
+
+model UserAnswer {
+  id          String      @id @default(cuid())
+  textAnswer  String?
+  optionIds   String[] // For checkbox/options
+  isCorrect   Boolean?
+  submittedAt DateTime    @default(now())
+  studentId   String
+  student     User        @relation(fields: [studentId], references: [id])
+  questionId  String
+  question    Question    @relation(fields: [questionId], references: [id])
+  attemptId   String
+  attempt     QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+}
