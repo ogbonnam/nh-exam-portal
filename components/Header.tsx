@@ -26,7 +26,7 @@ export default function Header({ userRole, session }: HeaderProps) {
   const getDashboardLink = () => {
     switch (userRole) {
       case "ADMIN":
-        return "/admin/users";
+        return "/admin";
       case "TEACHER":
         return "/teacher/dashboard";
       case "STUDENT":

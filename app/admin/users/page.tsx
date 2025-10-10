@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { PrismaClient } from "@prisma/client";
 import { createUser } from "./actions";
 import CreateUserForm from "./create-user-form";
+import BulkUploadForm from "./bulk-upload-form";
 
 const prisma = new PrismaClient();
 
@@ -24,6 +25,9 @@ export default async function AdminUsersPage() {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">Create New User</h2>
           <CreateUserForm />
+          <div className="mt-6">
+            <BulkUploadForm />
+          </div>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">Existing Users</h2>
