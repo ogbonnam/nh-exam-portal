@@ -67,12 +67,13 @@ function SubmitButton() {
 }
 
 // Add this inside your component, e.g. above the return
+// ADDED THIS FOR CONSISTENCY
 const yearGroupClasses: Record<string, string[]> = {
-  "Year 7": ["Year 7 AMA", "Year 7 SAG"],
-  "Year 8": ["Year 8 CAD", "Year 8 LDK"],
-  "Year 9": ["Year 9 NOI", "Year 9 ZAB"],
-  "Year 10": ["Year 10 MAL"],
-  "Year 11": ["Year 11 ZAK", "Year 11 LDK"],
+  "Year 7": ["Year 7 MMA", "Year 7 FAL"],
+  "Year 8": ["Year 8 SAG", "Year 8 AMQ"],
+  "Year 9": ["Year 9 CAD", "Year 9 ZAB"],
+  "Year 10": ["Year 10 NOI", "Year 10 ZAK"],
+  "Year 11": ["Year 11 MAL", "Year 11 LDK"],
 };
 
 export default function EditQuizForm({ quiz }: EditQuizFormProps) {
