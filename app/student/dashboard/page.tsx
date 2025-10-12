@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import Link from "next/link";
 import CountdownBadge from "./CountdownTimer";
 import StartButton from "./StartButton";
+import QuizCard from "./QuizCard";
 
 const prisma = new PrismaClient();
 const PAGE_SIZE = 3;
@@ -79,64 +80,9 @@ dbUser: ${JSON.stringify(dbUser)}`}
         <p className="text-gray-600 text-center text-lg">No available exams.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {quizzes.map((quiz) => {
-            const startTimeISO = quiz.startDate?.toISOString() ?? null;
-            const duration = quiz.duration ?? 60;
-
-            let serverRemainingSeconds: number | null = null;
-            let serverStartLabel: string | null = null;
-            let serverEndLabel: string | null = null;
-            let startTime: Date | null = null;
-            let endTime: Date | null = null;
-
-            if (startTimeISO) {
-              startTime = new Date(startTimeISO);
-              endTime = new Date(startTime.getTime() + duration * 60000);
-              serverRemainingSeconds = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
-              serverStartLabel = startTime.toLocaleString();
-              serverEndLabel = endTime.toLocaleString();
-            }
-
-            const now = new Date();
-            const hasStarted = startTime ? now >= startTime : false;
-            const hasEnded = endTime ? now >= endTime : false;
-
-            return (
-              <div
-                key={quiz.id}
-                className={`relative p-6 rounded-xl shadow-xl flex flex-col justify-between transition-transform transform hover:-translate-y-1 hover:shadow-2xl ${
-                  !hasStarted || hasEnded ? "opacity-90 bg-white" : "bg-gradient-to-br from-indigo-400 to-purple-500 text-white"
-                }`}
-              >
-                <CountdownBadge
-                  startTimeISO={startTimeISO}
-                  duration={duration}
-                  serverRemainingSeconds={serverRemainingSeconds}
-                  serverStartLabel={serverStartLabel}
-                  serverEndLabel={serverEndLabel}
-                />
-
-                <div>
-                  <h2 className="text-2xl font-bold mb-2">{quiz.title}</h2>
-                  {quiz.description && <p className="mb-2 text-sm md:text-base">{quiz.description}</p>}
-                  <p className="text-sm font-medium">
-                    <strong>Start:</strong> {startTime ? serverStartLabel : "TBD"}
-                  </p>
-                  <p className="text-sm font-medium">
-                    <strong>End:</strong> {endTime ? serverEndLabel : "TBD"}
-                  </p>
-                  <p className="text-sm font-medium">
-                    <strong>Duration:</strong> {quiz.duration} minutes
-                  </p>
-                  <p className="text-sm font-medium">
-                    <strong>Year/Class:</strong> {quiz.yearGroup} / {quiz.className}
-                  </p>
-                </div>
-
-                <StartButton quizId={quiz.id} startTimeISO={startTimeISO} duration={duration} />
-              </div>
-            );
-          })}
+          {quizzes.map((quiz) => (
+            <QuizCard key={quiz.id} quiz={quiz} />
+          ))}
         </div>
       )}
 
