@@ -21,7 +21,7 @@ export default async function LoginPage() {
     "/images/cultureandshopping.PNG",
     "/images/paris.jpg",
     "/images/arrivalinparis.jpg",
-    "/images/learning.jpg"
+    
   ];
 
   return (
