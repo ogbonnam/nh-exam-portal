@@ -5,17 +5,14 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function POST(
-  request: Request,
-  { params }: { params: { quizId: string; attemptId: string } }
-) {
-  const session = await auth();
+export async function POST(request: Request, context: any) {
+  const session = await auth(); // or await auth(request) if your auth needs the request
 
   if (!session || session.user?.role !== "TEACHER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { quizId, attemptId } = params;
+  const { quizId, attemptId } = context.params as { quizId: string; attemptId: string };
 
   try {
     // Verify the teacher owns this quiz
