@@ -18,7 +18,7 @@ export default async function LoginPage() {
   // Array of background images
   const backgroundImages = [
     "/images/hostel.jpg",
-    "/images/cultureandshopping.jpg",
+    "/images/cultureandshopping.PNG",
     "/images/paris.jpg",
     "/images/arrivalinparis.jpg",
     "/images/learning.jpg"
