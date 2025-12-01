@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import * as XLSX from "xlsx";
+import { revalidatePath } from "next/cache";
+
 
 
 declare global {
@@ -199,4 +201,57 @@ export async function uploadUsersExcel(formData: FormData): Promise<UploadResult
   }
 
   return result;
+}
+
+
+export async function updateUser(formData: FormData) {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") {
+    redirect("/unauthorized");
+  }
+
+  const id = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const roleId = formData.get("roleId") as string;
+  const yearGroup = formData.get("yearGroup") as string;
+  const className = formData.get("className") as string;
+
+  try {
+    await prisma.user.update({
+      where: { id },
+      data: {
+        name,
+        email,
+        roleId,
+        yearGroup: yearGroup || null,
+        className: className || null,
+      },
+    });
+
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error) {
+    return { error: "Failed to update user" };
+  }
+}
+
+export async function deleteUser(formData: FormData) {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") {
+    redirect("/unauthorized");
+  }
+
+  const id = formData.get("id") as string;
+
+  try {
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error) {
+return { error: "Failed to delete user" };
+  }
 }

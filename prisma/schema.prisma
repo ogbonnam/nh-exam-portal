@@ -59,6 +59,11 @@ model Quiz {
   // 🔥 New fields
   yearGroup   String   @default("Unknown")
   className   String   @default("Unknown")
+  
+  // New fields for academic year, term, and subterm
+  academicYear String        @default("2023-2024") // Format: "2023-2024"
+  term        String        @default("AUTUMN")     // AUTUMN, SPRING, SUMMER
+  subterm     String        @default("MIDTERM")    // MIDTERM, END_OF_TERM
 }
 
 model Question {
@@ -106,6 +111,7 @@ model QuizAttempt {
   submittedAt DateTime?
   focusLossCount  Int      @default(0)
   questionOrder   String[]
+  submissionReason String?      // Add this field to track submission reason
   UserAnswer  UserAnswer[]
 }
 

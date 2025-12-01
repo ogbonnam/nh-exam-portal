@@ -27,11 +27,11 @@ interface Question {
 }
 
 const yearGroupClasses: Record<string, string[]> = {
-  "Year 7": ["Year 7 MMA", "Year 7 FAL"],
-  "Year 8": ["Year 8 SAG", "Year 8 AMQ"],
-  "Year 9": ["Year 9 CAD", "Year 9 ZAB"],
-  "Year 10": ["Year 10 NOI", "Year 10 ZAK"],
-  "Year 11": ["Year 11 MAL", "Year 11 LDK"],
+   "Year 7": ["Year 7 FAL", "Year 7 MMA"],
+    "Year 8": ["Year 8 AMQ", "Year 8 SAG"],
+    "Year 9": ["Year 9 AMA", "Year 9 CAD"],
+    "Year 10": ["Year 10 NOI", "Year 10 ZAB"],
+    "Year 11": ["Year 11 AMU", "Year 11 MAL"],
 };
 
 // add near top of file (above the component)
@@ -59,8 +59,15 @@ export default function QuizCreationClient() {
   const [error, setError] = useState<string | null>(null);
   const [yearGroup, setYearGroup] = useState("");
   const [className, setClassName] = useState("");
+  const [academicYear, setAcademicYear] = useState("2023-2024");
+  const [term, setTerm] = useState("AUTUMN");
+  const [subterm, setSubterm] = useState("MIDTERM");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  
+  // Add state for date and time
+  const [startDate, setStartDate] = useState("");
+  const [startTime, setStartTime] = useState("");
 
   // Initialize with a single empty question on component mount
   useEffect(() => {
@@ -200,6 +207,16 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     formData.append("questions", JSON.stringify(questions));
     formData.append("yearGroup", yearGroup);
     formData.append("className", className);
+    // Add these lines to include academic fields
+    formData.append("academicYear", academicYear);
+    formData.append("term", term);
+    formData.append("subterm", subterm);
+    
+    // Combine date and time into a single datetime string
+    if (startDate && startTime) {
+      const startDateTime = new Date(`${startDate}T${startTime}`).toISOString();
+      formData.append("startDateTime", startDateTime);
+    }
 
     // NOTE: cast the return to the union type we declared above
     const result = (await createQuiz(formData)) as CreateQuizResult;
@@ -236,11 +253,57 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-8 my-10">
       {error && (
         <div className="p-4 bg-red-100 text-red-700 rounded-md">{error}</div>
       )}
       <div className="flex gap-4">
+              {/* Academic Year, Term, and Subterm Selection */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium">Academic Year</label>
+          <select
+            name="academicYear"
+            value={academicYear}
+            onChange={(e) => setAcademicYear(e.target.value)}
+            className="border rounded w-full p-2"
+            required
+          >
+            <option value="2023-2024">2023-2024</option>
+            <option value="2024-2025">2024-2025</option>
+            <option value="2025-2026">2025-2026</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">Term</label>
+          <select
+            name="term"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            className="border rounded w-full p-2"
+            required
+          >
+            <option value="AUTUMN">Autumn</option>
+            <option value="SPRING">Spring</option>
+            <option value="SUMMER">Summer</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">Subterm</label>
+          <select
+            name="subterm"
+            value={subterm}
+            onChange={(e) => setSubterm(e.target.value)}
+            className="border rounded w-full p-2"
+            required
+          >
+            <option value="MIDTERM">Midterm</option>
+            <option value="END_OF_TERM">End of Term</option>
+          </select>
+        </div>
+      </div>
         {/* Year Group */}
         <div>
           <label className="block text-sm font-medium">Year Group</label>
@@ -312,6 +375,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
             <input
               type="date"
               name="startDate"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
               className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </label>
@@ -321,6 +386,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
             <input
               type="time"
               name="startTime"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
               className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </label>

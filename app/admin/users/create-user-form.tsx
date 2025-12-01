@@ -1,170 +1,148 @@
+// app/admin/users/create-user-form.tsx
 "use client";
 
-import React from "react";
-import { useFormStatus } from "react-dom";
+import { useState } from "react";
 import { createUser } from "./actions";
+import { Role } from "@prisma/client";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 disabled:bg-green-400"
-    >
-      {pending ? "Creating..." : "Create User"}
-    </button>
-  );
+interface CreateUserFormProps {
+  roles: Role[];
 }
 
-const yearGroupClasses: Record<string, string[]> = {
-  "Year 7": ["Year 7 AMA", "Year 7 SAG"],
-  "Year 8": ["Year 8 CAD", "Year 8 LDK"],
-  "Year 9": ["Year 9 NOI", "Year 9 ZAB"],
-  "Year 10": ["Year 10 MAL"],
-  "Year 11": ["Year 11 ZAK", "Year 11 LDK"],
-};
+export default function CreateUserForm({ roles }: CreateUserFormProps) {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    roleId: roles[0]?.id || "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-export default function CreateUserForm() {
-  const [state, setState] = React.useState<{
-    error?: string;
-    success?: string;
-  }>({});
-  const [role, setRole] = React.useState<"TEACHER" | "STUDENT" | "ADMIN">(
-    "STUDENT"
-  );
-  const [yearGroup, setYearGroup] = React.useState<string>("");
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-  async function handleSubmit(formData: FormData) {
-    const result = await createUser(formData);
-    setState(result || {});
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const formDataObj = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        formDataObj.append(key, value);
+      });
+
+      const result = await createUser(formDataObj);
+      
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setSuccess(true);
+        setFormData({
+          name: "",
+          email: "",
+          password: "",
+          roleId: roles[0]?.id || "",
+        });
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <form action={handleSubmit} className="space-y-4">
-      {/* Name */}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-red-50 text-red-700 rounded-md">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="p-3 bg-green-50 text-green-700 rounded-md">
+          User created successfully!
+        </div>
+      )}
+
       <div>
-        <label htmlFor="name" className="block text-sm font-medium">
-          Full Name
+        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          Name
         </label>
         <input
-          name="name"
-          id="name"
           type="text"
+          id="name"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           required
-          className="mt-1 block w-full p-2 border rounded-md"
         />
       </div>
 
-      {/* Email */}
       <div>
-        <label htmlFor="email" className="block text-sm font-medium">
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
           Email
         </label>
         <input
-          name="email"
-          id="email"
           type="email"
+          id="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           required
-          className="mt-1 block w-full p-2 border rounded-md"
         />
       </div>
 
-      {/* Role */}
       <div>
-        <label htmlFor="role" className="block text-sm font-medium">
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+          Password
+        </label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          value={formData.password}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          required
+        />
+      </div>
+
+      <div>
+        <label htmlFor="roleId" className="block text-sm font-medium text-gray-700">
           Role
         </label>
         <select
-          name="role"
-          id="role"
+          id="roleId"
+          name="roleId"
+          value={formData.roleId}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           required
-          value={role}
-          onChange={(e) => setRole(e.target.value as any)}
-          className="mt-1 block w-full p-2 border rounded-md"
         >
-          <option value="TEACHER">Teacher</option>
-          <option value="STUDENT">Student</option>
-          <option value="ADMIN">Admin</option>
+          {roles.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
+            </option>
+          ))}
         </select>
       </div>
 
-      {/* Show only for STUDENT */}
-      {role === "STUDENT" && (
-        <>
-          {/* Year Group */}
-          <div>
-            <label htmlFor="yearGroup" className="block text-sm font-medium">
-              Year Group
-            </label>
-            <select
-              name="yearGroup"
-              id="yearGroup"
-              required
-              value={yearGroup}
-              onChange={(e) => setYearGroup(e.target.value)}
-              className="mt-1 block w-full p-2 border rounded-md"
-            >
-              <option value="">Select Year Group</option>
-              {Object.keys(yearGroupClasses).map((yg) => (
-                <option key={yg} value={yg}>
-                  {yg}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Class */}
-          <div>
-            <label htmlFor="className" className="block text-sm font-medium">
-              Class
-            </label>
-            <select
-              name="className"
-              id="className"
-              required
-              disabled={!yearGroup}
-              className="mt-1 block w-full p-2 border rounded-md"
-            >
-              <option value="">Select Class</option>
-              {yearGroup &&
-                yearGroupClasses[yearGroup].map((cls) => (
-                  <option key={cls} value={cls}>
-                    {cls}
-                  </option>
-                ))}
-            </select>
-          </div>
-        </>
-      )}
-
-      {/* Password */}
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium">
-          Initial Password
-        </label>
-        <input
-          name="password"
-          id="password"
-          type="password"
-          required
-          className="mt-1 block w-full p-2 border rounded-md"
-        />
-      </div>
-
-      {/* Error/Success */}
-      {state?.error && (
-        <p className="text-sm text-red-600 text-center font-medium mt-4">
-          {state.error}
-        </p>
-      )}
-      {state?.success && (
-        <p className="text-sm text-green-600 text-center font-medium mt-4">
-          {state.success}
-        </p>
-      )}
-
-      <SubmitButton />
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+      >
+        {isSubmitting ? "Creating..." : "Create User"}
+      </button>
     </form>
   );
 }

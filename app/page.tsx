@@ -81,32 +81,30 @@ export default function Home() {
       title: "Instant Results",
       description:
         "Get immediate feedback and detailed analysis of your performance.",
-      color: "from-green-400 to-emerald-600",
+      color: "bg-blue-500",
     },
     {
       icon: <FaClock className="text-3xl" />,
       title: "Time Tracking",
       description:
         "Monitor your progress and improve your time management skills.",
-      color: "from-blue-400 to-cyan-600",
+      color: "bg-green-500",
     },
     {
       icon: <FaChartLine className="text-3xl" />,
       title: "Performance Analytics",
       description:
         "Track your growth with comprehensive statistics and insights.",
-      color: "from-purple-400 to-indigo-600",
+      color: "bg-purple-500",
     },
     {
       icon: <FaUsers className="text-3xl" />,
       title: "Collaborative Learning",
       description:
         "Compete with friends and join study groups for better results.",
-      color: "from-pink-400 to-rose-600",
+      color: "bg-rose-500",
     },
   ];
-
-
 
   const subjects = [
     { name: "Mathematics", icon: <FaCalculator /> },
@@ -118,8 +116,6 @@ export default function Home() {
     { name: "Business", icon: <FaBalanceScale /> },
     { name: "French", icon: <FaBriefcase /> },
   ];
-
-
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -152,10 +148,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white overflow-x-hidden">
-      {/* Enhanced Navigation */}
-  
-
+    <div className="min-h-screen bg-gray-900 text-white overflow-x-hidden">
       {/* Hero Section */}
       <section className="min-h-screen flex items-center justify-center relative px-4 py-20">
         {/* Background Elements */}
@@ -164,7 +157,7 @@ export default function Home() {
             bubbles.map((b, i) => (
               <motion.div
                 key={i}
-                className="absolute rounded-full bg-purple-500/10"
+                className="absolute rounded-full bg-gray-800"
                 style={{
                   width: b.width,
                   height: b.height,
@@ -191,11 +184,11 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="inline-flex items-center gap-2 px-4 py-2 mb-6 bg-white/10 backdrop-blur-sm rounded-full border border-white/20"
+            className="inline-flex items-center gap-2 px-4 py-2 mb-6 bg-gray-800 rounded-full border border-gray-700"
           >
             <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
             </span>
             <span className="text-sm font-medium">
               🚀 The Future of Education is Here
@@ -206,11 +199,11 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400"
+            className="text-5xl md:text-7xl font-bold mb-6"
           >
             Administer Any Exam
             <br />
-            <span className="text-white">Effortlessly</span>
+            <span className="text-blue-400">Effortlessly</span>
           </motion.h1>
 
           <motion.p
@@ -231,7 +224,7 @@ export default function Home() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full font-semibold text-lg hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2"
+              className="px-8 py-4 bg-blue-600 rounded-full font-semibold text-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
             >
               Login
               <FaArrowRight />
@@ -250,7 +243,7 @@ export default function Home() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: 1 + index * 0.1 }}
-                className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 flex items-center gap-2 hover:bg-white/20 transition-all cursor-pointer"
+                className="px-4 py-2 bg-gray-800 rounded-full border border-gray-700 flex items-center gap-2 hover:bg-gray-700 transition-all cursor-pointer"
               >
                 {subject.icon}
                 <span>{subject.name}</span>
@@ -282,7 +275,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4">
+      <section id="features" className="py-20 px-4 bg-gray-800">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -311,9 +304,9 @@ export default function Home() {
                 key={index}
                 variants={itemVariants}
                 whileHover={{ y: -10 }}
-                className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all"
+                className="bg-gray-700 rounded-2xl p-6 border border-gray-600 hover:bg-gray-600 transition-all"
               >
-                <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-full flex items-center justify-center mb-6`}>
+                <div className={`w-16 h-16 ${feature.color} rounded-full flex items-center justify-center mb-6`}>
                   {feature.icon}
                 </div>
                 <h3 className="text-2xl font-semibold mb-3">{feature.title}</h3>
@@ -325,7 +318,7 @@ export default function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 px-4 bg-black/20">
+      <section className="py-20 px-4 bg-gray-800">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -335,153 +328,24 @@ export default function Home() {
             className="grid grid-cols-2 md:grid-cols-4 gap-8"
           >
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold text-purple-400 mb-2">10K+</div>
+              <div className="text-4xl md:text-5xl font-bold text-blue-400 mb-2">10K+</div>
               <div className="text-gray-300">Educators</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold text-purple-400 mb-2">500+</div>
+              <div className="text-4xl md:text-5xl font-bold text-blue-400 mb-2">500+</div>
               <div className="text-gray-300">Question Types</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold text-purple-400 mb-2">95%</div>
+              <div className="text-4xl md:text-5xl font-bold text-blue-400 mb-2">95%</div>
               <div className="text-gray-300">Time Saved</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold text-purple-400 mb-2">4.9</div>
+              <div className="text-4xl md:text-5xl font-bold text-blue-400 mb-2">4.9</div>
               <div className="text-gray-300">Teacher Rating</div>
             </div>
           </motion.div>
         </div>
       </section>
-
-      {/* Testimonials Section - Commented Out */}
-      {/* <section id="testimonials" className="py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              What Our Users Say
-            </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Join thousands of satisfied learners who have transformed their study habits with QuizMaster Pro.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -10 }}
-                className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all"
-              >
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-white font-bold">{testimonial.avatar}</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">{testimonial.name}</h4>
-                    <p className="text-gray-400 text-sm">{testimonial.role}</p>
-                  </div>
-                </div>
-                <div className="flex mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <FaStar
-                      key={i}
-                      className={`text-yellow-400 ${
-                        i < testimonial.rating ? "" : "opacity-30"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <p className="text-gray-300 italic">
-                  <FaQuoteLeft className="inline mr-2 text-purple-400 opacity-50" />
-                  {testimonial.content}
-                  <FaQuoteRight className="inline ml-2 text-purple-400 opacity-50" />
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section> */}
-
-      {/* Pricing Section - Commented Out */}
-      {/* <section id="pricing" className="py-20 px-4 bg-black/20">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Choose Your Plan
-            </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Select the perfect plan for your learning needs. All plans include our core features.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {pricingPlans.map((plan, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -10 }}
-                className={`bg-white/10 backdrop-blur-md rounded-2xl p-8 border ${
-                  plan.highlighted
-                    ? "border-purple-500 shadow-lg shadow-purple-500/30"
-                    : "border-white/20"
-                } hover:bg-white/15 transition-all relative`}
-              >
-                {plan.highlighted && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="px-4 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full text-sm font-semibold">
-                      Most Popular
-                    </div>
-                  </div>
-                )}
-                <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                <div className="mb-6">
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  {plan.period && <span className="text-gray-400">/{plan.period}</span>}
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start">
-                      <FaCheckCircle className="text-green-400 mr-3 mt-1 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`w-full py-3 rounded-full font-semibold transition-all ${
-                    plan.highlighted
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:shadow-lg hover:shadow-purple-500/30"
-                      : "bg-white/10 hover:bg-white/20 border border-white/20"
-                  }`}
-                >
-                  Get Started
-                </motion.button>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section> */}
 
       {/* CTA Section */}
       <section className="py-20 px-4">
@@ -491,12 +355,12 @@ export default function Home() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl p-12 text-center"
+            className="bg-gray-800 rounded-3xl p-12 text-center border border-gray-700"
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
               Ready to Transform Your Assessment Process?
             </h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto">
+            <p className="text-xl mb-8 max-w-2xl mx-auto text-gray-300">
               Join thousands of educators who are already creating effective exams with NoHLAG Exams.
             </p>
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
@@ -506,13 +370,13 @@ export default function Home() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
-                className="flex-1 px-6 py-3 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
+                className="flex-1 px-6 py-3 rounded-full bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 type="submit"
-                className="px-8 py-3 bg-white text-purple-600 rounded-full font-semibold hover:bg-gray-100 transition-all"
+                className="px-8 py-3 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition-all"
               >
                 Get Started
               </motion.button>
@@ -521,7 +385,7 @@ export default function Home() {
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-4 text-green-300"
+                className="mt-4 text-green-400"
               >
                 Thank you for subscribing! Check your email for further instructions.
               </motion.p>
@@ -531,7 +395,7 @@ export default function Home() {
       </section>
 
       {/* Footer - Simplified */}
-      <footer className="py-12 px-4 border-t border-white/10">
+      <footer className="py-12 px-4 border-t border-gray-800">
         <div className="max-w-6xl mx-auto">
           <div className="pt-8 text-center text-gray-400">
             <p>

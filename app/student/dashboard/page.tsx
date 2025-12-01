@@ -1,21 +1,16 @@
 // app/student/dashboard/page.tsx
-import React from "react";
+import React, { Suspense } from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { PrismaClient } from "@prisma/client";
 import Link from "next/link";
-import CountdownBadge from "./CountdownTimer";
-import StartButton from "./StartButton";
 import QuizCard from "./QuizCard";
+import Loading from "./loading";
 
 const prisma = new PrismaClient();
 const PAGE_SIZE = 3;
 
-export default async function StudentDashboardPage(props: any): Promise<React.ReactElement> {
-  // normalize searchParams (accepts plain object or Promise)
-  const rawSearch = await Promise.resolve(props?.searchParams);
-  const searchParams = (rawSearch ?? {}) as { page?: string };
-
+async function StudentDashboardContent({ searchParams }: { searchParams?: { page?: string } }) {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
 
@@ -37,7 +32,7 @@ export default async function StudentDashboardPage(props: any): Promise<React.Re
       <div className="container mx-auto p-6">
         <h1 className="text-3xl font-bold mb-4">My Exams</h1>
         <p className="text-gray-700">
-          We couldn’t determine your year group or class name.
+          We couldn't determine your year group or class name.
           Please contact your administrator to update your student profile.
         </p>
 
@@ -61,7 +56,7 @@ dbUser: ${JSON.stringify(dbUser)}`}
     className: studentClass,
   };
 
-  const page = Math.max(1, parseInt(searchParams.page || "1", 10) || 1);
+  const page = Math.max(1, parseInt(searchParams?.page || "1", 10) || 1);
   const totalQuizzes = await prisma.quiz.count({ where });
   const quizzes = await prisma.quiz.findMany({
     where,
@@ -70,10 +65,60 @@ dbUser: ${JSON.stringify(dbUser)}`}
     skip: (page - 1) * PAGE_SIZE,
   });
 
+  // Fetch quiz attempts for the current user
+  const userId = dbUser?.id;
+  const attempts = userId ? await prisma.quizAttempt.findMany({
+    where: {
+      studentId: userId,
+      quizId: { in: quizzes.map(q => q.id) }
+    }
+  }) : [];
+
+  // Create a map of quizId to submission status
+  const submissionStatusMap: Record<string, "not_submitted" | "submitted_by_user" | "submitted_by_system"> = {};
+  
+  // Initialize all quizzes as not submitted
+  quizzes.forEach(quiz => {
+    submissionStatusMap[quiz.id] = "not_submitted";
+  });
+
+  // Update status for quizzes with attempts
+  attempts.forEach((attempt: any) => {
+    // Only consider submitted attempts
+    if (attempt.isSubmitted) {
+      // Determine if submission was by user or system
+      const quiz = quizzes.find(q => q.id === attempt.quizId);
+      if (quiz && quiz.startDate) {
+        const endTime = new Date(new Date(quiz.startDate).getTime() + quiz.duration * 60000);
+        const submittedAt = attempt.submittedAt ? new Date(attempt.submittedAt) : null;
+        
+        // If submittedAt is null, we can't determine, so default to system
+        if (!submittedAt) {
+          submissionStatusMap[attempt.quizId] = "submitted_by_system";
+          return;
+        }
+        
+        // Check if we have a submissionReason field
+        if (attempt.submissionReason === "TIME_EXPIRED") {
+          submissionStatusMap[attempt.quizId] = "submitted_by_system";
+        } else if (attempt.submissionReason === "USER_SUBMITTED") {
+          submissionStatusMap[attempt.quizId] = "submitted_by_user";
+        } else {
+          // Fallback: compare submission time with quiz end time
+          if (submittedAt < endTime) {
+            submissionStatusMap[attempt.quizId] = "submitted_by_user";
+          } else {
+            submissionStatusMap[attempt.quizId] = "submitted_by_system";
+          }
+        }
+      }
+    }
+  });
+
   const totalPages = Math.max(1, Math.ceil(totalQuizzes / PAGE_SIZE));
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 my-10">
       <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">My Exams</h1>
 
       {quizzes.length === 0 ? (
@@ -81,7 +126,11 @@ dbUser: ${JSON.stringify(dbUser)}`}
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {quizzes.map((quiz) => (
-            <QuizCard key={quiz.id} quiz={quiz} />
+            <QuizCard 
+              key={quiz.id} 
+              quiz={quiz} 
+              submissionStatus={submissionStatusMap[quiz.id]} 
+            />
           ))}
         </div>
       )}
@@ -100,5 +149,17 @@ dbUser: ${JSON.stringify(dbUser)}`}
         </div>
       )}
     </div>
+  );
+}
+
+export default async function StudentDashboardPage(props: any): Promise<React.ReactElement> {
+  // normalize searchParams (accepts plain object or Promise)
+  const rawSearch = await Promise.resolve(props?.searchParams);
+  const searchParams = (rawSearch ?? {}) as { page?: string };
+
+  return (
+    <Suspense fallback={<Loading />}>
+      <StudentDashboardContent searchParams={searchParams} />
+    </Suspense>
   );
 }

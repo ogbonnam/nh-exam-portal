@@ -1,7 +1,9 @@
+// app/teacher/quizzes/edit/[id]/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { QuestionType } from "@prisma/client";
 import { updateQuiz } from "@/app/teacher/quizzes/actions";
 import QuestionEditor, {
@@ -33,8 +35,11 @@ interface EditQuizFormProps {
     duration: number;
     startDate: Date | null;
     startTime: Date | null;
-    yearGroup: string; // <-- add this
-    className: string; // <-- add this
+    yearGroup: string;
+    className: string;
+    academicYear: string;
+    term: string;
+    subterm: string;
     questions: {
       id: string;
       text: string;
@@ -66,20 +71,21 @@ function SubmitButton() {
   );
 }
 
-// Add this inside your component, e.g. above the return
-// ADDED THIS FOR CONSISTENCY
 const yearGroupClasses: Record<string, string[]> = {
-  "Year 7": ["Year 7 MMA", "Year 7 FAL"],
-  "Year 8": ["Year 8 SAG", "Year 8 AMQ"],
-  "Year 9": ["Year 9 CAD", "Year 9 ZAB"],
-  "Year 10": ["Year 10 NOI", "Year 10 ZAK"],
-  "Year 11": ["Year 11 MAL", "Year 11 LDK"],
-};
+   "Year 7": ["Year 7 FAL", "Year 7 MMA"],
+    "Year 8": ["Year 8 AMQ", "Year 8 SAG"],
+    "Year 9": ["Year 9 AMA", "Year 9 CAD"],
+    "Year 10": ["Year 10 NOI", "Year 10 ZAB"],
+    "Year 11": ["Year 11 AMU", "Year 11 MAL"],};
 
 export default function EditQuizForm({ quiz }: EditQuizFormProps) {
-  // State for selected year group and class
+  const router = useRouter();
   const [yearGroup, setYearGroup] = useState(quiz.yearGroup);
   const [className, setClassName] = useState(quiz.className || "");
+  const [academicYear, setAcademicYear] = useState(quiz.academicYear || "2023-2024");
+  const [term, setTerm] = useState(quiz.term || "AUTUMN");
+  const [subterm, setSubterm] = useState(quiz.subterm || "MIDTERM");
+  
   const getStartTimeString = (date: Date | null) => {
     if (!date) return "";
     const hours = String(date.getHours()).padStart(2, "0");
@@ -99,8 +105,8 @@ export default function EditQuizForm({ quiz }: EditQuizFormProps) {
     duration: quiz.duration,
     startDate: quiz.startDate?.toISOString().split("T")[0] || "",
     startTime: getStartTimeString(quiz.startTime),
-    yearGroup: quiz.yearGroup || "Unknown", // <-- add this
-    className: quiz.className || "Unknown", // <-- add this
+    yearGroup: quiz.yearGroup || "Unknown",
+    className: quiz.className || "Unknown",
   });
 
   const addQuestion = () => {
@@ -172,7 +178,6 @@ export default function EditQuizForm({ quiz }: EditQuizFormProps) {
     setQuestions(newQuestions);
   };
 
-  // Conditionally create the startDateTime string for the hidden input
   const startDateTime =
     quizDetails.startDate && quizDetails.startTime
       ? new Date(
@@ -181,12 +186,24 @@ export default function EditQuizForm({ quiz }: EditQuizFormProps) {
       : "";
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Edit Quiz: {quiz.title}</h1>
+    <div className="container mx-auto p-4 my-10">
+      {/* Header with Back Button */}
+      <div className="flex items-center mb-6">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center text-gray-600 hover:text-gray-900 mr-4 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+          Back
+        </button>
+        <h1 className="text-3xl font-bold">Edit Quiz: {quiz.title}</h1>
+      </div>
+
       <form action={updateQuiz} className="space-y-8">
         <input type="hidden" name="quizId" value={quiz.id} />
 
-        {/* Hidden inputs for the quiz details. The startDateTime is now a single, computed value. */}
         <input type="hidden" name="title" value={quizDetails.title} />
         <input
           type="hidden"
@@ -195,28 +212,29 @@ export default function EditQuizForm({ quiz }: EditQuizFormProps) {
         />
         <input type="hidden" name="duration" value={quizDetails.duration} />
         <input type="hidden" name="startDateTime" value={startDateTime} />
-        {/* Include hidden inputs for form submission */}
         <input type="hidden" name="yearGroup" value={yearGroup} />
         <input type="hidden" name="className" value={className} />
+        
+        {/* Hidden inputs for academic fields */}
+        <input type="hidden" name="academicYear" value={academicYear} />
+        <input type="hidden" name="term" value={term} />
+        <input type="hidden" name="subterm" value={subterm} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          {/* Year Group */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Year Group
             </label>
             <select
-                name="yearGroup"
-                value={yearGroup}
-                onChange={(e) => {
-                  setYearGroup(e.target.value);
-                  // Reset className when yearGroup changes
-                  const firstClass = yearGroupClasses[e.target.value]?.[0] || "";
-                  setClassName(firstClass);
-                }}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              >
-
+              name="yearGroup"
+              value={yearGroup}
+              onChange={(e) => {
+                setYearGroup(e.target.value);
+                const firstClass = yearGroupClasses[e.target.value]?.[0] || "";
+                setClassName(firstClass);
+              }}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
               {Object.keys(yearGroupClasses).map((yg) => (
                 <option key={yg} value={yg}>
                   {yg}
@@ -225,7 +243,6 @@ export default function EditQuizForm({ quiz }: EditQuizFormProps) {
             </select>
           </div>
 
-          {/* Class Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Class Name
@@ -241,6 +258,53 @@ export default function EditQuizForm({ quiz }: EditQuizFormProps) {
                   {cls}
                 </option>
               ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Academic Year, Term, and Subterm Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Academic Year
+            </label>
+            <select
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="2023-2024">2023-2024</option>
+              <option value="2024-2025">2024-2025</option>
+              <option value="2025-2026">2025-2026</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Term
+            </label>
+            <select
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="AUTUMN">Autumn</option>
+              <option value="SPRING">Spring</option>
+              <option value="SUMMER">Summer</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Subterm
+            </label>
+            <select
+              value={subterm}
+              onChange={(e) => setSubterm(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="MIDTERM">Midterm</option>
+              <option value="END_OF_TERM">End of Term</option>
             </select>
           </div>
         </div>
@@ -396,6 +460,23 @@ export default function EditQuizForm({ quiz }: EditQuizFormProps) {
                     </option>
                     <option value={QuestionType.PARAGRAPH}>Paragraph</option>
                   </select>
+                </div>
+
+                {/* Added Points Input Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Points
+                  </label>
+                  <input
+                    type="number"
+                    value={question.points}
+                    onChange={(e) =>
+                      handleQuestionChange(qIndex, "points", Number(e.target.value))
+                    }
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    min="1"
+                    required
+                  />
                 </div>
 
                 {question.type === QuestionType.OPTIONS ||

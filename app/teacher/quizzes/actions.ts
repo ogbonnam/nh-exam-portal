@@ -4,7 +4,25 @@ import { PrismaClient, QuestionType } from "@prisma/client";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-const prisma = new PrismaClient();
+import * as mammoth from "mammoth";
+import { randomUUID } from "crypto";
+import { Packer, Document, Paragraph, Media } from "docx";
+import JSZip from "jszip";
+import { readFileSync } from "fs";
+
+
+declare global {
+  var __prisma__: PrismaClient | undefined;
+}
+const prisma: PrismaClient = global.__prisma__ ?? new PrismaClient();
+if (process.env.NODE_ENV !== "production") global.__prisma__ = prisma;
+
+async function checkAdminOrTeacher() {
+  const session = await auth();
+  if (!session || !["ADMIN", "TEACHER"].includes(session.user?.role || "")) {
+    redirect("/unauthorized");
+  }
+}
 
 interface QuizFormState {
   error?: string;
@@ -17,6 +35,23 @@ interface FetchQuizzesOptions {
   className?: string;
   page?: number;
   pageSize?: number;
+}
+// Types
+interface Option {
+  id: string;
+  text: string;
+  imageUrl: string | null;
+  isCorrect: boolean;
+}
+
+interface Question {
+  id: string;
+  text: string;
+  imageUrl: string | null;
+  type: "OPTIONS" | "CHECKBOX" | "PARAGRAPH" | "FILL_IN_THE_BLANK";
+  points: number;
+  correctAnswer: string;
+  options: Option[];
 }
 
 // export async function createQuiz(formData: FormData) {
@@ -101,6 +136,11 @@ export async function createQuiz(formData: FormData) {
   // ✅ new: grab yearGroup and className
   const yearGroup = formData.get("yearGroup") as string;
   const className = formData.get("className") as string;
+  
+  // ✅ Add these lines to get academic fields
+  const academicYear = formData.get("academicYear") as string;
+  const term = formData.get("term") as string;
+  const subterm = formData.get("subterm") as string;
 
   const questionsData = JSON.parse(formData.get("questions") as string);
 
@@ -115,6 +155,9 @@ export async function createQuiz(formData: FormData) {
         teacherId: session.user.id!,
         yearGroup, // ✅ save to DB
         className, // ✅ save to DB
+        academicYear, // ✅ Add this
+        term,         // ✅ Add this
+        subterm,      // ✅ Add this
         questions: {
           create: questionsData.map((q: any) => ({
             text: q.text,
@@ -239,6 +282,11 @@ export async function updateQuiz(formData: FormData): Promise<void> {
 
     const yearGroup = String(formData.get("yearGroup") ?? quiz.yearGroup ?? "");
     const className = String(formData.get("className") ?? quiz.className ?? "");
+    
+    // Add these lines to get academic fields
+    const academicYear = String(formData.get("academicYear") ?? quiz.academicYear ?? "");
+    const term = String(formData.get("term") ?? quiz.term ?? "");
+    const subterm = String(formData.get("subterm") ?? quiz.subterm ?? "");
 
     const questionsData = JSON.parse(String(formData.get("questions") ?? "[]"));
 
@@ -265,6 +313,9 @@ export async function updateQuiz(formData: FormData): Promise<void> {
           startTime: combinedDateTime,
           yearGroup: yearGroup || undefined,
           className: className || undefined,
+          academicYear: academicYear || undefined, // Add this
+          term: term || undefined,                 // Add this
+          subterm: subterm || undefined,          // Add this
         },
       })
     );
@@ -337,8 +388,6 @@ export async function updateQuiz(formData: FormData): Promise<void> {
 
 
 export async function duplicateQuiz(formData: FormData) {
-  "use server";
-
   const quizId = formData.get("quizId") as string;
   if (!quizId) throw new Error("Quiz ID is required");
 
@@ -361,6 +410,9 @@ export async function duplicateQuiz(formData: FormData) {
       canTeacherEdit: true,
       yearGroup: originalQuiz.yearGroup,
       className: originalQuiz.className,
+      academicYear: originalQuiz.academicYear, // Add this
+      term: originalQuiz.term,                 // Add this
+      subterm: originalQuiz.subterm,          // Add this
       questions: {
         create: originalQuiz.questions.map((q) => ({
           text: q.text,
@@ -406,4 +458,152 @@ export async function fetchTeacherQuizzes({
   });
 
   return { quizzes, total };
+}
+
+
+// Upload and parse DOCX
+export async function uploadQuizDocxWithImages(formData: FormData) {
+  await checkAdminOrTeacher();
+
+  const file = formData.get("file") as File | null;
+  if (!file) throw new Error("No file uploaded");
+
+  const buffer = await file.arrayBuffer();
+  const zip = await import("jszip").then((m) => m.loadAsync(buffer));
+
+  let text = "";
+  try {
+    const mammoth = (await import("mammoth")).default;
+    const result = await mammoth.extractRawText({ arrayBuffer: buffer });
+    text = result?.value ?? "";
+  } catch (err) {
+    console.warn("Failed to extract text from DOCX:", err);
+  }
+
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  // Load images from the DOCX media folder
+  const imagesMap: Record<string, string> = {};
+  zip.folder("word/media")?.forEach(async (relativePath, file) => {
+    const data = await file.async("base64");
+    imagesMap[relativePath] = `data:image/png;base64,${data}`;
+  });
+
+  const questions: Question[] = [];
+  let current: Partial<Question> = {};
+  let options: Option[] = [];
+  let optionIndex = 0;
+
+  for (const line of lines) {
+    if (/^Q\d+:/.test(line)) {
+      if (current.text) {
+        current.options = options;
+        questions.push(current as Question);
+      }
+      current = {
+        id: crypto.randomUUID(),
+        text: line.split(":")[1].trim(),
+        points: 1,
+        type: "OPTIONS",
+        options: [],
+        correctAnswer: "",
+      };
+      options = [];
+      optionIndex = 0;
+    } else if (/^Type:/.test(line)) {
+      const typeStr = line.split(":")[1].trim().toUpperCase();
+      if (["OPTIONS", "CHECKBOX", "PARAGRAPH", "FILL_IN_THE_BLANK"].includes(typeStr))
+        current.type = typeStr as QuestionType;
+    } else if (/^Points:/.test(line)) {
+      current.points = parseInt(line.split(":")[1].trim(), 10) || 1;
+    } else if (/^Option [A-Z]:/.test(line)) {
+      const match = line.match(/^Option ([A-Z]): (.*)/);
+      if (match) {
+        const [_full, label, optionText] = match;
+        const imageName = `option${label}${questions.length + 1}.png`;
+        const imageUrl = imagesMap[imageName] ?? null;
+
+        options.push({
+          id: crypto.randomUUID(),
+          text: optionText,
+          imageUrl,
+          isCorrect: false,
+        });
+        optionIndex++;
+      }
+    } else if (/^Correct:/.test(line)) {
+      const correctLabels = line
+        .split(":")[1]
+        .trim()
+        .split(",")
+        .map((s) => s.trim());
+      options.forEach((o: Option, i: number) => {
+        const label = String.fromCharCode(65 + i);
+        if (correctLabels.includes(label)) o.isCorrect = true;
+      });
+      current.correctAnswer =
+        current.type === "CHECKBOX" ? correctLabels.join(",") : correctLabels[0];
+    } else if (/^Answer:/.test(line)) {
+      current.correctAnswer = line.split(":")[1].trim();
+    }
+  }
+
+  if (current.text) {
+    current.options = options;
+    questions.push(current as Question);
+  }
+
+  const title = formData.get("title") as string;
+  const description = formData.get("description") as string;
+  const yearGroup = formData.get("yearGroup") as string;
+  const className = formData.get("className") as string;
+  const duration = Number(formData.get("duration") ?? 60);
+  const startDateStr = formData.get("startDate") as string | null;
+  const startTimeStr = formData.get("startTime") as string | null;
+  const startDate = startDateStr ? new Date(startDateStr) : undefined;
+  const startTime =
+    startTimeStr && startDateStr ? new Date(`${startDateStr}T${startTimeStr}`) : undefined;
+
+  const teacherId = (await auth())?.user?.id!;
+
+  const quiz = await prisma.quiz.create({
+    data: {
+      title,
+      description,
+      yearGroup,
+      className,
+      duration,
+      startDate,
+      startTime,
+      teacherId,
+      questions: {
+        create: questions.map((q) => ({
+          text: q.text,
+          type: q.type,
+          points: q.points,
+          correctAnswer: q.correctAnswer,
+          options:
+            q.options?.length > 0
+              ? {
+                  create: q.options.map((o) => ({
+                    text: o.text,
+                    isCorrect: o.isCorrect,
+                    imageUrl: o.imageUrl,
+                  })),
+                }
+              : undefined,
+        })),
+      },
+    },
+  });
+
+  return {
+    success: true,
+    quizId: quiz.id,
+    questionsCount: questions.length,
+    questions, // parsed questions for preview
+  };
 }
