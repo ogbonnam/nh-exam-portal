@@ -1,21 +1,18 @@
 // app/api/teacher/quizzes/[quizId]/export-results/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { quizId: string } }
-) {
-  const session = await auth();
-  
+export async function GET(request: Request, context: any) {
+  const session = await auth(); // or await auth(request) if auth reads cookies/headers
+
   if (!session || session.user?.role !== "TEACHER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { quizId } = params;
+  const { quizId } = (context.params as { quizId: string }) || {};
 
   try {
     // Verify the teacher owns this quiz
@@ -28,11 +25,11 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Fetch all attempts with student data
+    // Fetch all submitted attempts with student info
     const attempts = await prisma.quizAttempt.findMany({
-      where: { 
+      where: {
         quizId,
-        isSubmitted: true 
+        isSubmitted: true
       },
       include: {
         student: {
@@ -47,49 +44,52 @@ export async function GET(
       where: { quizId },
       select: { points: true }
     });
-    
-    const maxScore = questions.reduce((sum, q) => sum + (q.points || 1), 0);
 
-    // Format data for CSV export
+    const maxScore = questions.reduce((sum, q) => sum + (q.points ?? 1), 0);
+
+    // Prepare CSV rows
     const csvData = attempts.map(attempt => {
-      const score = attempt.score || 0;
+      const score = attempt.score ?? 0;
       const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-      
+
       return {
-        "Student Name": attempt.student?.name || attempt.student?.email || "Unknown",
-        "Student Email": attempt.student?.email || "",
-        "Score": score,
+        "Student Name": attempt.student?.name ?? attempt.student?.email ?? "Unknown",
+        "Student Email": attempt.student?.email ?? "",
+        "Score": String(score),
         "Percentage": `${percentage}%`,
-        "Focus Loss Count": attempt.focusLossCount,
-        "Submission Date": attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleDateString() : ""
+        "Focus Loss Count": String(attempt.focusLossCount ?? 0),
+        "Submission Date": attempt.submittedAt ? new Date(attempt.submittedAt).toISOString() : ""
       };
     });
 
-    // Convert to CSV
-    const headers = Object.keys(csvData[0] || {});
-    const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => 
-        headers.map(header => {
-          // Escape quotes and handle commas in the data
-          const value = row[header as keyof typeof row] || "";
-          return typeof value === 'string' && value.includes(',') 
-            ? `"${value.replace(/"/g, '""')}"` 
-            : value;
-        }).join(',')
-      )
-    ].join('\n');
+    // If there are no rows, return an empty CSV with headers
+    const headers = ["Student Name", "Student Email", "Score", "Percentage", "Focus Loss Count", "Submission Date"];
+    const csvRows = csvData.length
+      ? csvData.map(row => headers.map(h => {
+          const raw = row[h as keyof typeof row] ?? "";
+          const str = String(raw);
+          // escape quotes and wrap if contains comma or newline
+          if (str.includes('"')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          if (str.includes(',') || str.includes('\n')) {
+            return `"${str}"`;
+          }
+          return str;
+        }).join(','))
+      : [];
 
-    // Create response with CSV file
-    const response = new NextResponse(csvContent, {
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
+
+    const filenameSafe = (quiz.title ?? "quiz_results").replace(/[^a-z0-9]/gi, '_');
+
+    return new NextResponse(csvContent, {
       status: 200,
       headers: {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="${quiz.title.replace(/[^a-z0-9]/gi, '_')}_results.csv"`
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${filenameSafe}_results.csv"`
       }
     });
-
-    return response;
   } catch (error) {
     console.error("Error exporting results:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
